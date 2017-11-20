@@ -1,6 +1,5 @@
-
 const readline = require('readline');
-const fs = require('fs');
+const fse = require('fs-extra');
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -11,18 +10,6 @@ const askQuestion = (question) => (
   new Promise((res) => {
     rl.question(question, answer => {
       res(answer);
-    });
-  })
-);
-
-const readDir = (path) => (
-  new Promise((res) => {
-    fs.readdir(path, (err, list) => {
-      if (err) {
-        throw err;
-      }
-
-      res(list);
     });
   })
 );
@@ -73,7 +60,7 @@ const flattenMessages = (nestedMessages, prefix = '') => {
   rl.close();
 
   // Scan Languages List
-  const langDirList = await readDir(path);
+  const langDirList = await fse.readdir(path);
 
   // Get All Languages Data
   const langs = langDirList
@@ -152,11 +139,7 @@ const flattenMessages = (nestedMessages, prefix = '') => {
 
   // Write to File
   const csvData = allRows.join('\n');
-  fs.writeFile(outputFilename, csvData, 'utf8', (err) => {
-    if (err) {
-      throw err;
-    }
+  await fse.writeFile(outputFilename, csvData, 'utf8');
 
-    console.log('Success!');
-  });
+  console.log('Success!');
 })();
