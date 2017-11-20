@@ -1,7 +1,6 @@
 
 const readline = require('readline');
-const fs = require('fs');
-const rimraf = require('rimraf');
+const fse = require('fs-extra');
 const unflatten = require('flat').unflatten
 const flattenDeep = require('lodash').flattenDeep
 
@@ -14,36 +13,6 @@ const askQuestion = (question) => (
   new Promise((res) => {
     rl.question(question, answer => {
       res(answer);
-    });
-  })
-);
-
-const readDir = (path) => (
-  new Promise((res) => {
-    fs.readdir(path, (err, list) => {
-      if (err) {
-        throw err;
-      }
-
-      res(list);
-    });
-  })
-);
-
-const rmAll = (path) => (
-  new Promise((res) => {
-    rimraf(path, res);
-  })
-);
-
-const makeDir = (path) => (
-  new Promise((res) => {
-    fs.mkdir(path, (err) => {
-      if (err) {
-        throw err;
-      }
-
-      res();
     });
   })
 );
@@ -80,129 +49,118 @@ const makeDir = (path) => (
   rl.close();
 
   // Remove and Make Output Directory
-  await rmAll(outputPath);
-  await makeDir(outputPath);
+  await fse.remove(outputPath);
+  await fse.mkdir(outputPath);
 
   // Read Message File
-  fs.readFile(inputFilename, 'utf8', (err, data) => {
-    if (err) {
-      throw err;
+  const data = await fse.readFile(inputFilename, 'utf8');
+
+  // Parse CSV
+  const rows = data.split('\n');
+  const head = rows.shift();
+  const headList = head.split(',');
+
+  // Get All lang keys
+  const [
+    category,
+    key,
+    ...allLangKeys
+  ] = headList;
+
+  // Parse to Language Matrix
+  const langMatrix = rows.map((row) => {
+    const data = row.split(',').reduce((accumulator, currentData, currentIndex) => {
+      const headKey = headList[currentIndex];
+      accumulator[headKey] = currentData.length ? currentData : null;
+      return accumulator;
+    }, {});
+
+    return data;
+  });
+
+  // Make Lang Dirs
+  await Promise.all(allLangKeys.map((langKey) => {
+    const langPath = `${outputPath}/${langKey}`;
+
+    return fse.mkdir(langPath);
+  }));
+
+  // Get All Categories
+  const allCategories = langMatrix.reduce((accumulator, currentData) => {
+    if (accumulator.indexOf(currentData.category) === -1) {
+      accumulator.push(currentData.category);
     }
 
-    // Parse CSV
-    const rows = data.split('\n');
-    const head = rows.shift();
-    const headList = head.split(',');
+    return accumulator;
+  }, []);
 
-    // Get All lang keys
-    const [
-      category,
-      key,
-      ...allLangKeys
-    ] = headList;
+  // Write all categories
+  allLangKeys.forEach((langKey) => {
+    const langPath = `${outputPath}/${langKey}`;
 
-    // Parse to Language Matrix
-    const langMatrix = rows.map((row) => {
-      const data = row.split(',').reduce((accumulator, currentData, currentIndex) => {
-        const headKey = headList[currentIndex];
-        accumulator[headKey] = currentData.length ? currentData : null;
-        return accumulator;
-      }, {});
+    allCategories.forEach(async (category) => {
+      const langData = langMatrix
+        .filter(lang => lang.category === category)
+        .filter(lang => lang[langKey])
+        .reduce((accumulator, currentLang)=> {
+          accumulator[currentLang.key] = currentLang[langKey];
 
-      return data;
-    });
+          return accumulator;
+        }, {});
 
-    // Make Lang Dirs
-    allLangKeys.forEach(async (langKey) => {
-      const langPath = `${outputPath}/${langKey}`;
+      const unflattenLangData = unflatten(langData);
 
-      await makeDir(langPath);
-    });
+      if (Object.keys(unflattenLangData).length > 0) {
+        const unflattenMessages = (flattenMessages, depth = 1) => {
+          return Object.keys(flattenMessages).reduce((accumulator, currentKey) => {
 
-    // Get All Categories
-    const allCategories = langMatrix.reduce((accumulator, currentData) => {
-      if (accumulator.indexOf(currentData.category) === -1) {
-        accumulator.push(currentData.category);
-      }
-
-      return accumulator;
-    }, []);
-
-    // Write all categories
-    allLangKeys.forEach(async (langKey) => {
-      const langPath = `${outputPath}/${langKey}`;
-
-      allCategories.forEach((category) => {
-        const langData = langMatrix
-          .filter(lang => lang.category === category)
-          .filter(lang => lang[langKey])
-          .reduce((accumulator, currentLang)=> {
-            accumulator[currentLang.key] = currentLang[langKey];
+            if (typeof flattenMessages[currentKey] === 'object') {
+              const tmpMessages = unflattenMessages(flattenMessages[currentKey], depth + 1);
+              tmpMessages.unshift(`${'  '.repeat(depth)}${currentKey}: {`);
+              tmpMessages.push(`${'  '.repeat(depth)}},`)
+              accumulator.push(tmpMessages);
+            } else {
+              accumulator.push(`${'  '.repeat(depth)}${currentKey}: '${flattenMessages[currentKey]}',`);
+            }
 
             return accumulator;
-          }, {});
-
-        const unflattenLangData = unflatten(langData);
-
-        if (Object.keys(unflattenLangData).length > 0) {
-          const unflattenMessages = (flattenMessages, depth = 1) => {
-            return Object.keys(flattenMessages).reduce((accumulator, currentKey) => {
-
-              if (typeof flattenMessages[currentKey] === 'object') {
-                const tmpMessages = unflattenMessages(flattenMessages[currentKey], depth + 1);
-                tmpMessages.unshift(`${'  '.repeat(depth)}${currentKey}: {`);
-                tmpMessages.push(`${'  '.repeat(depth)}},`)
-                accumulator.push(tmpMessages);
-              } else {
-                accumulator.push(`${'  '.repeat(depth)}${currentKey}: '${flattenMessages[currentKey]}',`);
-              }
-
-              return accumulator;
-            }, []);
-          }
-
-          const outputArray = flattenDeep(unflattenMessages(unflattenLangData));
-          outputArray.unshift('export default {');
-          outputArray.push('};');
-          const outputData = outputArray.join('\n');
-
-          fs.writeFile(`${langPath}/${category}.js`, outputData, 'utf8', (err) => {
-            if (err) {
-              throw err;
-            }
-          });
+          }, []);
         }
-      });
-    });
 
-    // Write index.js
-    allLangKeys.forEach(async (langKey) => {
-      const langPath = `${outputPath}/${langKey}`;
+        const outputArray = flattenDeep(unflattenMessages(unflattenLangData));
+        outputArray.unshift('export default {');
+        outputArray.push('};');
+        const outputData = outputArray.join('\n');
 
-      const langCategoryList = await readDir(langPath);
-
-      const categoryKeys = langCategoryList.map(langCategory => langCategory.split('.')[0])
-        .filter(lang => lang);
-
-      const outputArray = [];
-      categoryKeys.forEach(key => {
-        outputArray.push(`import ${key} from './${key}';`);
-      });
-      outputArray.push('');
-
-      outputArray.push('export default {');
-      categoryKeys.forEach(key => {
-        outputArray.push(`  ${key},`);
-      });
-      outputArray.push('};');
-
-      const ouputData = outputArray.join('\n');
-
-      fs.writeFile(`${langPath}/index.js`, ouputData, 'utf8', (err) => {
-        if (err) {
-          throw err;
-        }
-      });
+        await fse.writeFile(`${langPath}/${category}.js`, outputData, 'utf8');
+      }
     });
   });
+
+  // Write index.js
+  await Promise.all(allLangKeys.map(async (langKey) => {
+    const langPath = `${outputPath}/${langKey}`;
+    const langCategoryList = await fse.readdir(langPath);
+
+    const categoryKeys = langCategoryList.map(langCategory => langCategory.split('.')[0])
+      .filter(lang => lang);
+
+    const outputArray = [];
+    categoryKeys.forEach(key => {
+      outputArray.push(`import ${key} from './${key}';`);
+    });
+    outputArray.push('');
+
+    outputArray.push('export default {');
+    categoryKeys.forEach(key => {
+      outputArray.push(`  ${key},`);
+    });
+    outputArray.push('};');
+
+    const ouputData = outputArray.join('\n');
+
+    return fse.writeFile(`${langPath}/index.js`, ouputData, 'utf8');
+  }));
+
+  console.log('Success!');
 })();
