@@ -1,8 +1,14 @@
 
 const readline = require('readline');
 const fse = require('fs-extra');
-const unflatten = require('flat').unflatten
-const flattenDeep = require('lodash').flattenDeep
+const unflatten = require('flat').unflatten;
+const flattenDeep = require('lodash').flattenDeep;
+const csvParse = require('csv-parse');
+
+process.on('unhandledRejection', error => {
+  // Will print "unhandledRejection err is not defined"
+  console.log('unhandledRejection', error.message);
+});
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -14,6 +20,12 @@ const askQuestion = (question) => (
     rl.question(question, answer => {
       res(answer);
     });
+  })
+);
+
+const parseToCSV = (input) => (
+  new Promise((resolve) => {
+    csvParse(input, {}, (_, output) => resolve(output))
   })
 );
 
@@ -56,9 +68,8 @@ const askQuestion = (question) => (
   const data = await fse.readFile(inputFilename, 'utf8');
 
   // Parse CSV
-  const rows = data.split('\n');
-  const head = rows.shift();
-  const headList = head.split(',');
+  const rows = await parseToCSV(data);
+  const headList = rows.shift();
 
   // Get All lang keys
   const [
@@ -69,7 +80,7 @@ const askQuestion = (question) => (
 
   // Parse to Language Matrix
   const langMatrix = rows.map((row) => {
-    const data = row.split(',').reduce((accumulator, currentData, currentIndex) => {
+    const data = row.reduce((accumulator, currentData, currentIndex) => {
       const headKey = headList[currentIndex];
       accumulator[headKey] = currentData.length ? currentData : null;
       return accumulator;
