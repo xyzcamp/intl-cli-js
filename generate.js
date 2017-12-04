@@ -1,6 +1,7 @@
 const readline = require('readline');
 const fse = require('fs-extra');
 const csvStringify = require('csv-stringify');
+const XLSX = require('xlsx');
 
 process.on('unhandledRejection', error => {
   // Will print "unhandledRejection err is not defined"
@@ -64,8 +65,8 @@ const flattenMessages = (nestedMessages, prefix = '') => {
     defaultLocale = inputDefaultLocale ? inputDefaultLocale : 'zh';
 
     // Get Output Filename
-    const inputOutputFilename = await askQuestion('Enter your output filename: (./output-messages.csv) ');
-    outputFilename = inputOutputFilename ? inputOutputFilename : './output-messages.csv';
+    const inputOutputFilename = await askQuestion('Enter your output filename: (./output-messages.xlsx) ');
+    outputFilename = inputOutputFilename ? inputOutputFilename : './output-messages.xlsx';
   }
 
   // Close Waiting Read Line
@@ -132,7 +133,7 @@ const flattenMessages = (nestedMessages, prefix = '') => {
     };
   });
 
-  // To CSV Format
+  // Transform
   const headRow = Object.keys(langs).reduce((accumulator, currentLangKey) => {
     accumulator.push(currentLangKey);
     return accumulator;
@@ -144,9 +145,28 @@ const flattenMessages = (nestedMessages, prefix = '') => {
     }, []);
   });
   allRows.unshift(headRow);
-  const csvString = await formatToCSV(allRows);
 
-  // Write to File
-  await fse.writeFile(outputFilename, csvString, 'utf8');
+  // Get File Type
+  const outputFilenames = outputFilename.split('.');
+  const fileType = outputFilenames[outputFilenames.length - 1];
+
+  if (fileType === 'csv') {
+    // Format To CSV and Save
+    const csvString = await formatToCSV(allRows);
+    await fse.writeFile(outputFilename, csvString, 'utf8');
+  } else if (fileType === 'xlsx') {
+    // Format to xlsx and Save
+    const worksheet = XLSX.utils.aoa_to_sheet(allRows);
+    const workbook = {
+      SheetNames: ['sheet1'],
+      Sheets: {
+        'sheet1': worksheet,
+      },
+    };
+    XLSX.writeFile(workbook, outputFilename);
+  } else {
+    throw new Error(`Unknown File type: ${outputFilename}`);
+  }
+
   console.log('Success!');
 })();
