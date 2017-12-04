@@ -4,6 +4,7 @@ const fse = require('fs-extra');
 const unflatten = require('flat').unflatten;
 const flattenDeep = require('lodash').flattenDeep;
 const csvParse = require('csv-parse');
+const XLSX = require('xlsx');
 
 process.on('unhandledRejection', error => {
   // Will print "unhandledRejection err is not defined"
@@ -45,8 +46,8 @@ const parseToCSV = (input) => (
     [inputFilename, defaultLocale, outputPath] = langArgvs;
   } else {
     // Get Input Messages Filename
-    const inputInputFilename = await askQuestion('Enter your input message filename: (./output-messages.csv) ');
-    inputFilename = inputInputFilename ? inputInputFilename : './output-messages.csv';
+    const inputInputFilename = await askQuestion('Enter your input message filename: (./output-messages.xlsx) ');
+    inputFilename = inputInputFilename ? inputInputFilename : './output-messages.xlsx';
 
     // Get Default Locale
     const inputDefaultLocale = await askQuestion('Enter your default locale: (zh) ');
@@ -64,30 +65,60 @@ const parseToCSV = (input) => (
   await fse.remove(outputPath);
   await fse.mkdir(outputPath);
 
+  // Get File Type
+  const inputFilenames = inputFilename.split('.');
+  const fileType = inputFilenames[inputFilenames.length - 1];
+
   // Read Message File
-  const data = await fse.readFile(inputFilename, 'utf8');
+  let allLangKeys;
+  let langMatrix;
+  if (fileType === 'csv') {
+    // Parse CSV
+    const data = await fse.readFile(inputFilename, 'utf8');
+    const rows = await parseToCSV(data);
+    const headList = rows.shift();
 
-  // Parse CSV
-  const rows = await parseToCSV(data);
-  const headList = rows.shift();
+    // Get All lang keys
+    const [
+      category,
+      key,
+      ...allKeys
+    ] = headList;
+    allLangKeys = allKeys;
 
-  // Get All lang keys
-  const [
-    category,
-    key,
-    ...allLangKeys
-  ] = headList;
+    // Parse to Language Matrix
+    langMatrix = rows.map((row) => {
+      const data = row.reduce((accumulator, currentData, currentIndex) => {
+        const headKey = headList[currentIndex];
+        accumulator[headKey] = currentData.length ? currentData : null;
+        return accumulator;
+      }, {});
 
-  // Parse to Language Matrix
-  const langMatrix = rows.map((row) => {
-    const data = row.reduce((accumulator, currentData, currentIndex) => {
-      const headKey = headList[currentIndex];
-      accumulator[headKey] = currentData.length ? currentData : null;
-      return accumulator;
-    }, {});
+      return data;
+    });
+  } else if (fileType === 'xlsx') {
+    const workbook = XLSX.readFile(inputFilename);
+    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
 
-    return data;
-  });
+    allLangKeys = Object.keys(worksheet)
+      .filter(key => {
+        const matches = key.match(/[A-Z]+(\d+)/);
+
+        if (matches) {
+          return matches[1] === '1';
+        }
+
+        return false;
+      })
+      .map(key => worksheet[key].v)
+      .filter(langKey => (langKey !== 'category' && langKey !== 'key'));
+
+    langMatrix = XLSX.utils.sheet_to_json(worksheet);
+  } else {
+    throw new Error(`Unknown File type: ${inputFilename}`);
+  }
+
+  console.log(allLangKeys);
 
   // Make Lang Dirs
   await Promise.all(allLangKeys.map((langKey) => {
