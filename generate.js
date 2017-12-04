@@ -1,5 +1,11 @@
 const readline = require('readline');
 const fse = require('fs-extra');
+const csvStringify = require('csv-stringify');
+
+process.on('unhandledRejection', error => {
+  // Will print "unhandledRejection err is not defined"
+  console.log('unhandledRejection', error.message);
+});
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -13,6 +19,12 @@ const askQuestion = (question) => (
     });
   })
 );
+
+const formatToCSV = (input) => (
+  new Promise((resolve) => {
+    csvStringify(input, (_, output) => resolve(output))
+  })
+)
 
 const flattenMessages = (nestedMessages, prefix = '') => {
   return Object.keys(nestedMessages).reduce((messages, key) => {
@@ -122,24 +134,19 @@ const flattenMessages = (nestedMessages, prefix = '') => {
 
   // To CSV Format
   const headRow = Object.keys(langs).reduce((accumulator, currentLangKey) => {
-    return `${accumulator},${currentLangKey}`;
-  }, `category,key`);
+    accumulator.push(currentLangKey);
+    return accumulator;
+  }, ['category', 'key']);
   const allRows = langMatrix.map((langData) => {
-    const {
-      category,
-      key,
-      ...otherLangs,
-    } = langData;
-
-    return Object.keys(otherLangs).reduce((accumulator, currentValue) => {
-      return `${accumulator},${otherLangs[currentValue] || ''}`;
-    }, `${category},${key}`);
+    return Object.keys(langData).reduce((accumulator, currentValue) => {
+      accumulator.push(langData[currentValue]);
+      return accumulator;
+    }, []);
   });
   allRows.unshift(headRow);
+  const csvString = await formatToCSV(allRows);
 
   // Write to File
-  const csvData = allRows.join('\n');
-  await fse.writeFile(outputFilename, csvData, 'utf8');
-
+  await fse.writeFile(outputFilename, csvString, 'utf8');
   console.log('Success!');
 })();
