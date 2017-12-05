@@ -118,8 +118,6 @@ const parseToCSV = (input) => (
     throw new Error(`Unknown File type: ${inputFilename}`);
   }
 
-  console.log(allLangKeys);
-
   // Make Lang Dirs
   await Promise.all(allLangKeys.map((langKey) => {
     const langPath = `${outputPath}/${langKey}`;
