@@ -1,7 +1,6 @@
 
 const readline = require('readline');
 const fse = require('fs-extra');
-const unflatten = require('flat').unflatten;
 const flattenDeep = require('lodash').flattenDeep;
 const csvParse = require('csv-parse');
 const XLSX = require('xlsx');
@@ -146,11 +145,34 @@ const parseToCSV = (input) => (
           accumulator[currentLang.key] = currentLang[langKey];
 
           return accumulator;
+        }, {})
+
+      if (Object.keys(langData).length > 0) {
+        const unflattenLangData = Object.keys(langData).reduce((accumulator, currentKey) => {
+          const value = langData[currentKey];
+          const keys = currentKey.split('.');
+          const lastKeyIndex = keys.length - 1;
+
+          const appendKeyValue = (carry, keys, index) => {
+            const key = keys[index];
+            if (index === lastKeyIndex) {
+              if (carry[key]) {
+                throw new Error(`Conflict Key Error: ${currentKey} in ${category}`);
+              }
+
+              carry[key] = value;
+            } else if (!carry[key]) {
+              carry[key] = appendKeyValue({}, keys, index + 1);
+            } else {
+              carry[key] = appendKeyValue(carry[key], keys, index + 1);
+            }
+
+            return carry;
+          }
+
+          return appendKeyValue(accumulator, keys, 0);
         }, {});
 
-      const unflattenLangData = unflatten(langData);
-
-      if (Object.keys(unflattenLangData).length > 0) {
         const unflattenMessages = (flattenMessages, depth = 1) => {
           return Object.keys(flattenMessages).reduce((accumulator, currentKey) => {
 
@@ -185,14 +207,16 @@ const parseToCSV = (input) => (
     const categoryKeys = langCategoryList.map(langCategory => langCategory.split('.')[0])
       .filter(lang => lang);
 
+    const existCategoryKeys = allCategories.filter(categoryKey => categoryKeys.indexOf(categoryKey) !== -1);
+
     const outputArray = [];
-    categoryKeys.forEach(key => {
+    existCategoryKeys.forEach(key => {
       outputArray.push(`import ${key} from './${key}';`);
     });
     outputArray.push('');
 
     outputArray.push('export default {');
-    categoryKeys.forEach(key => {
+    existCategoryKeys.forEach(key => {
       outputArray.push(`  ${key},`);
     });
     outputArray.push('};');
