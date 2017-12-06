@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "generate": "babel-node generate.js --presets es2015,stage-2 --arguments ./example-messages zh ./output-example-messages.xlsx",
-    "parse": "babel-node parse.js --presets es2015,stage-2 --arguments ./output-example-messages.xlsx zh ./output-example-messages",
+    "generate": "babel-node ./src/generate.js --presets es2015,stage-2 --arguments ./example-messages zh ./output-example-messages.xlsx",
+    "parse": "babel-node ./src/parse.js --presets es2015,stage-2 --arguments ./output-example-messages.xlsx zh ./output-example-messages",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
