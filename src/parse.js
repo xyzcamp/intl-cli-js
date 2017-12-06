@@ -1,9 +1,9 @@
 
-const readline = require('readline');
-const fse = require('fs-extra');
-const flattenDeep = require('lodash').flattenDeep;
-const csvParse = require('csv-parse');
-const XLSX = require('xlsx');
+import readline from 'readline';
+import fse from 'fs-extra';
+import { flattenDeep } from 'lodash';
+import csvParse from 'csv-parse';
+import XLSX from 'xlsx';
 
 process.on('unhandledRejection', error => {
   // Will print "unhandledRejection err is not defined"

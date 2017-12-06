@@ -1,7 +1,7 @@
-const readline = require('readline');
-const fse = require('fs-extra');
-const csvStringify = require('csv-stringify');
-const XLSX = require('xlsx');
+import readline from 'readline';
+import fse from 'fs-extra';
+import csvStringify from 'csv-stringify';
+import XLSX from 'xlsx';
 
 process.on('unhandledRejection', error => {
   // Will print "unhandledRejection err is not defined"
@@ -88,7 +88,7 @@ const flattenMessages = (nestedMessages, prefix = '') => {
       }
 
       return {
-        ... accumulator,
+        ...accumulator,
         [currentLangDir]: flattenMessages(messages),
       };
     }, {});
