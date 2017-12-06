@@ -1,4 +1,3 @@
-
 import readline from 'readline';
 import fse from 'fs-extra';
 import { flattenDeep } from 'lodash';
@@ -29,7 +28,7 @@ const parseToCSV = (input) => (
   })
 );
 
-(async function main() {
+async function mainFunction() {
   const argvIndex = process.argv.findIndex(arg => arg === '--arguments');
 
   let inputFilename;
@@ -227,4 +226,6 @@ const parseToCSV = (input) => (
   }));
 
   console.log('Success!');
-})();
+};
+
+mainFunction();

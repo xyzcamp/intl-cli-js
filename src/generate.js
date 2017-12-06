@@ -42,7 +42,7 @@ const flattenMessages = (nestedMessages, prefix = '') => {
   }, {});
 }
 
-(async function main() {
+async function mainFunction() {
   const argvIndex = process.argv.findIndex(arg => arg === '--arguments');
 
   let path;
@@ -169,4 +169,6 @@ const flattenMessages = (nestedMessages, prefix = '') => {
   }
 
   console.log('Success!');
-})();
+};
+
+mainFunction();
