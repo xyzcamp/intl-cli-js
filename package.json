@@ -2,7 +2,12 @@
   "name": "intl-cli-js",
   "version": "0.1.0",
   "description": "",
+  "bin": {
+    "intl-generate": "dist/generate.js",
+    "intl-parse": "dist/parse.js"
+  },
   "scripts": {
+    "build": "rollup -c",
     "generate": "babel-node ./src/generate.js --presets es2015,stage-2 --arguments ./example-messages zh ./output-example-messages.xlsx",
     "parse": "babel-node ./src/parse.js --presets es2015,stage-2 --arguments ./output-example-messages.xlsx zh ./output-example-messages",
     "test": "echo \"Error: no test specified\" && exit 1"
