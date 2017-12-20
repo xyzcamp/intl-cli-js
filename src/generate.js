@@ -87,10 +87,8 @@ async function mainFunction() {
         throw new Error(`Unknown filename: ${path}/${currentLangDir}`);
       }
 
-      return {
-        ...accumulator,
-        [currentLangDir]: flattenMessages(messages),
-      };
+      accumulator[currentLangDir] = flattenMessages(messages);
+      return accumulator;
     }, {});
 
   // Get All Keys
@@ -116,10 +114,8 @@ async function mainFunction() {
   const langMatrix = allKeys.map((key) => {
     const allLangsByKey = Object.keys(langs)
       .reduce((accumulator, currentLangKey) => {
-        return {
-          ...accumulator,
-          [currentLangKey]: langs[currentLangKey][key],
-        };
+        accumulator[currentLangKey] = langs[currentLangKey][key];
+        return accumulator;
       }, {});
 
     const keyList = key.split('.');
