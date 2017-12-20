@@ -56,6 +56,10 @@ async function mainFunction() {
     outputPath = inputOuputPath ? inputOuputPath : './output-messages';
   }
 
+  // Append current work directory
+  inputFilename = `${process.cwd()}/${inputFilename}`;
+  outputPath = `${process.cwd()}/${outputPath}`;
+
   // Close Waiting Read Line
   rl.close();
 

@@ -69,6 +69,10 @@ async function mainFunction() {
     outputFilename = inputOutputFilename ? inputOutputFilename : './output-messages.xlsx';
   }
 
+  // Append current work directory
+  path = `${process.cwd()}/${path}`;
+  outputFilename = `${process.cwd()}/${outputFilename}`;
+
   // Close Waiting Read Line
   rl.close();
 
