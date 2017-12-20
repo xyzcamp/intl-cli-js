@@ -3,6 +3,10 @@ import fse from 'fs-extra';
 import csvStringify from 'csv-stringify';
 import XLSX from 'xlsx';
 
+require = require("@std/esm")(module, {
+  esm: 'js',
+});
+
 process.on('unhandledRejection', error => {
   // Will print "unhandledRejection err is not defined"
   console.log('unhandledRejection', error.message);
