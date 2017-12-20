@@ -1,6 +1,6 @@
 {
   "name": "intl-cli-js",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "",
   "bin": {
     "intl-generate": "dist/generate.js",
