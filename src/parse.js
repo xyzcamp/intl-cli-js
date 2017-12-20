@@ -224,7 +224,7 @@ async function mainFunction() {
     });
     outputArray.push('};');
 
-    const ouputData = outputArray.join('\n');
+    const ouputData = outputArray.join('\n') + '\n';
 
     return fse.writeFile(`${langPath}/index.js`, ouputData, 'utf8');
   }));
