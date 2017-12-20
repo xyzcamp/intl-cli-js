@@ -195,7 +195,7 @@ async function mainFunction() {
         const outputArray = flattenDeep(unflattenMessages(unflattenLangData));
         outputArray.unshift('export default {');
         outputArray.push('};');
-        const outputData = outputArray.join('\n');
+        const outputData = outputArray.join('\n') + '\n';
 
         await fse.writeFile(`${langPath}/${category}.js`, outputData, 'utf8');
       }
